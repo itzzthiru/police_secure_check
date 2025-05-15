@@ -30,7 +30,8 @@ def fetch_data(query):
         df = pd.DataFrame(rows, columns=columns)
         mycursor.close()
     else:
-        df = pd.read_sql(query, connection)
+        st.error("Failed to connect to the database.")
+        return pd.DataFrame()
     
     connection.close()
     return df
@@ -140,7 +141,7 @@ elif page == "SQL Queries":
                                                                                   FROM Police_checklist WHERE Violation IS NOT NULL GROUP BY Country_name ORDER BY drug_related_rate_percent DESC""",
         "14. What is the arrest rate by country and violation?":  """SELECT Country_name,Violation,COUNT(*) AS total_stops,SUM(CASE WHEN Is_arrested = 1 THEN 1 ELSE 0 END) AS total_arrests,ROUND(100 * SUM(CASE WHEN Is_arrested = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS arrest_rate_percent
                                                                FROM Police_checklist WHERE Violation IS NOT NULL GROUP BY Country_name, Violation ORDER BY Country_name, arrest_rate_percent DESC""",
-        "15. Which country has the most stops with search conducted?": """SELECTCountry_name,COUNT(*) AS total_stops,SUM(CASE WHEN Search_conducted = 1 THEN 1 ELSE 0 END) AS total_searches,ROUND(100 * SUM(CASE WHEN Search_conducted = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS search_rate_percent
+        "15. Which country has the most stops with search conducted?": """SELECT Country_name,COUNT(*) AS total_stops,SUM(CASE WHEN Search_conducted = 1 THEN 1 ELSE 0 END) AS total_searches,ROUND(100 * SUM(CASE WHEN Search_conducted = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS search_rate_percent
                                                                           FROM Police_checklist WHERE Search_conducted = 1 GROUP BY Country_name ORDER BY total_searches DESC""",
         "16. Yearly Breakdown of Stops and Arrests by Country":  """SELECT Year,Country_name,Total_stops,Total_arrests,ROUND(100*Total_arrests/Total_stops,2) AS Arrest_rate,SUM(Total_stops) OVER (PARTITION BY Country_name ORDER BY Year) AS Cumulative_stops,SUM(Total_arrests) OVER (PARTITION BY Country_name ORDER BY year) AS Cumulative_arrests
                                                                    FROM (SELECT YEAR(Stop_date) AS Year ,Country_name,COUNT(*) AS Total_stops,SUM(CASE WHEN Is_arrested = 1 THEN 1 ELSE 0 END) AS Total_arrests
@@ -165,11 +166,14 @@ elif page == "SQL Queries":
 
      selected_query = st.selectbox("Select a query to run",list(queries.keys()))
 
-     if st.button("Run Query"):
-        query_result = fetch_data(queries[selected_query])
-        if not query_result.empty:
-            st.write("Query_result")
-            st.dataframe(query_result)
+    if st.button("Run Query"):
+        with st.spinner("Running query..."):
+            query_result = fetch_data(queries[selected_query])
+            if not query_result.empty:
+                st.write("Query result:")
+                st.dataframe(query_result)
+            else:
+                st.warning("No data returned for this query.")
 
 
 #PAGE 4: A New Police Ledger For Prediction 
@@ -203,7 +207,7 @@ elif page == "A New Police Ledger For Prediction":
                 
             if not filter_data.empty:
                 predicted_outcome = filter_data['stop_outcome'].mode()[0]
-                predicted_violation = filtered_data['violation'].mode()[0]
+                predicted_violation = filter_data['violation'].mode()[0]
             else:
                 predicted_outcome = "warning"
                 predicted_violation = "speeding"

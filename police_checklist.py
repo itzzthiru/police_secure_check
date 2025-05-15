@@ -166,7 +166,7 @@ elif page == "SQL Queries":
 
      selected_query = st.selectbox("Select a query to run",list(queries.keys()))
 
-    if st.button("Run Query"):
+     if st.button("Run Query"):
         with st.spinner("Running query..."):
             query_result = fetch_data(queries[selected_query])
             if not query_result.empty:
